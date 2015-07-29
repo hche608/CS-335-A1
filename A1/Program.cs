@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using System.Text;
 using System.Net;
 using Newtonsoft.Json;
 
@@ -81,7 +82,8 @@ namespace A1
                 System.Console.Write("\n\n");
 
                 // LeftOuterJoin
-                var result_LeftOuterJoin = new XElement("LeftOuterJoin",
+                var result_LeftOuterJoin = 
+                    new XElement("LeftOuterJoin",
                     from customer in xDocLeft.Descendants(xpath_1)
                     join order in xDocRight.Descendants(xpath_2)
                     on (string)customer.Attribute(spath_1)
@@ -90,18 +92,46 @@ namespace A1
                     into lotJoin                    
                     from feed in lotJoin.DefaultIfEmpty()
                     orderby customer.Attribute(spath_1).Value ascending, feed == null ? String.Empty : feed.Attribute(kpath_2).Value ascending
-
                     select new XElement("Join",
                         new XElement(xpath_1,
                             new XAttribute(kpath_1, customer.Attribute(kpath_1).Value), customer.Value),
                             new XElement(xpath_2,
                                 new XAttribute(kpath_2, feed == null ? String.Empty : feed.Attribute(kpath_2).Value),
                                 new XAttribute(spath_2, feed == null ? String.Empty : feed.Attribute(spath_2).Value), feed == null ? String.Empty : feed.Value)));
-
+                result_LeftOuterJoin.Descendants("Join").Elements(xpath_2).Where(x => x.Value == "").Remove();
                 System.Console.Write(result_LeftOuterJoin);
+
                 result_LeftOuterJoin.Save("_LeftOuterJoin.xml");
+                System.Console.Write("\n\n");
+
+                // GroupJoin
+                var result_GroupJoin = new XElement("GroupJoin",
+                                        //from customer in xDocLeft.Descendants(xpath_1)
+                                        from order in xDocRight.Descendants(xpath_2)
+                                        //on (string)customer.Attribute(spath_1)
+                                        //equals
+                                        //(string)order.Attribute(spath_2)
+                                        //orderby customer.Attribute(spath_1).Value ascending, order == null ? String.Empty : order.Attribute(kpath_2).Value ascending
+                                        group order by order.Attribute("CID").Value
+                                        into grped_order
+                                        join customer in xDocLeft.Descendants(xpath_1)
+                                        on (string)grped_order.Key
+                                        equals
+                                        (string)customer.Attribute(spath_2)
+                                        into gp
+                                        orderby grped_order.Key
+                                        select new XElement("Join",
+                                                    new XElement(xpath_1, 
+                                                        new XAttribute(kpath_1, grped_order.Key), ""),
+                                                    new XElement("Group", 
+                                                        new XAttribute("Count", grped_order.Count()), grped_order.DescendantsAndSelf())  
+                                            ));
+          
+                System.Console.Write(result_GroupJoin);
+                result_GroupJoin.Save("_GroupJoin.xml");
 
                 System.Console.Write("\n\n");
+
 
                 //try
                 //{
@@ -132,36 +162,6 @@ namespace A1
                 //{
                 //    Console.WriteLine("Open Json file error: {0}\n\n", e);
                 //}
-                
-
-                //// GroupJoin
-                //var result_GroupJoin = new XElement("GroupJoin",
-                //    from customer in xDocLeft.Descendants(xpath_1)
-                //    join order in xDocRight.Descendants(xpath_2)
-                //    on (string)customer.Attribute(spath_1)
-                //    equals
-                //    (string)order.Attribute(spath_2)
-                //    into lotJoin
-                //    orderby customer.Attribute(spath_1).Value ascending//, lotJoin.Attribute(kpath_2).Value ascending
-
-                //    from feed in lotJoin.DefaultIfEmpty()
-                //    group customer by feed.Value
-                //    into grp
-                //    select new XElement("Join",
-                //        new XElement(xpath_1,
-                //            new XAttribute(kpath_1, customer.Attribute(kpath_1).Value), customer.Value),
-                //        new XElement("Group",
-                //            new XElement(xpath_2,
-                //                new XAttribute(kpath_2, feed == null ? String.Empty : feed.Attribute(kpath_2).Value),
-                //                new XAttribute(spath_2, feed == null ? String.Empty : feed.Attribute(spath_2).Value), feed == null ? String.Empty : feed.Value),
-                //            new XAttribute("Count",0))    
-                //            ));
-
-                //System.Console.Write(result_GroupJoin);
-                //result_GroupJoin.Save("_GroupJoin.xml");
-
-                //System.Console.Write("\n\n");
-
 
                 Console.ReadKey();
 
