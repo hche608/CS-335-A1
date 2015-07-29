@@ -31,7 +31,7 @@ namespace A1
                 // LeftSeqs
                 var result_LeftSeqs = new XElement("LeftSeq",
                     from feed in xDocLeft.Descendants(xpath_1)
-                    orderby feed.Attribute(kpath_1).Value ascending//, feed.Value ascending
+                    orderby feed.Attribute(spath_1).Value ascending//, feed.Value ascending
                     select new XElement(xpath_1,
                             new XAttribute(kpath_1, feed.Attribute(kpath_1).Value), feed.Value));
 
@@ -85,44 +85,49 @@ namespace A1
                     on (string)customer.Attribute(spath_1)
                     equals
                     (string)order.Attribute(spath_2)
-
-                    //orderby customer.Attribute(spath_1).Value ascending, order.Attribute(kpath_2).Value ascending
-                    into lotJoin
-                    from whatever in lotJoin.DefaultIfEmpty()
+                    into lotJoin                    
+                    from feed in lotJoin.DefaultIfEmpty()
+                    orderby customer.Attribute(spath_1).Value ascending, feed == null ? String.Empty : feed.Attribute(kpath_2).Value ascending
                     select new XElement("Join",
                         new XElement(xpath_1,
                             new XAttribute(kpath_1, customer.Attribute(kpath_1).Value), customer.Value),
-                        new XElement(xpath_2,
-                            new XAttribute(kpath_2, lotJoin.Attribute(kpath_2).Value),
-                            new XAttribute(spath_2, lotJoin.Attribute(spath_2).Value), lotJoin.Value)));
+                            new XElement(xpath_2,
+                                new XAttribute(kpath_2, feed == null ? String.Empty : feed.Attribute(kpath_2).Value),
+                                new XAttribute(spath_2, feed == null ? String.Empty : feed.Attribute(spath_2).Value), feed == null ? String.Empty : feed.Value)));
 
-                System.Console.Write(result_InnerJoin);
-                result_InnerJoin.Save("_InnerJoin.xml");
+                System.Console.Write(result_LeftOuterJoin);
+                result_LeftOuterJoin.Save("_LeftOuterJoin.xml");
 
                 System.Console.Write("\n\n");
 
-                //// LeftSeqs
-                //var result_LeftSeqs = from feed in xDocLeft.Descendants(xpath_1)
-                //             orderby feed.Attribute(kpath_1).Value
-                //             select new
-                //             {
-                //                 xpath = feed.Value,
-                //                 kpath = feed.Attribute(kpath_1).Value,
-                //                 spath = feed.Attribute(spath_1).Value
-                //             };
+                //// GroupJoin
+                //var result_GroupJoin = new XElement("GroupJoin",
+                //    from customer in xDocLeft.Descendants(xpath_1)
+                //    join order in xDocRight.Descendants(xpath_2)
+                //    on (string)customer.Attribute(spath_1)
+                //    equals
+                //    (string)order.Attribute(spath_2)
+                //    into lotJoin
+                //    orderby customer.Attribute(spath_1).Value ascending//, lotJoin.Attribute(kpath_2).Value ascending
 
-                //foreach (var detail in result_LeftSeqs)
-                //{
-                //    Console.WriteLine("xpath: {0}, kpath: {1}, spath: {2}", detail.xpath, detail.kpath, detail.spath);
-                //}
+                //    from feed in lotJoin.DefaultIfEmpty()
+                //    group customer by feed.Value
+                //    into grp
+                //    select new XElement("Join",
+                //        new XElement(xpath_1,
+                //            new XAttribute(kpath_1, customer.Attribute(kpath_1).Value), customer.Value),
+                //        new XElement("Group",
+                //            new XElement(xpath_2,
+                //                new XAttribute(kpath_2, feed == null ? String.Empty : feed.Attribute(kpath_2).Value),
+                //                new XAttribute(spath_2, feed == null ? String.Empty : feed.Attribute(spath_2).Value), feed == null ? String.Empty : feed.Value),
+                //            new XAttribute("Count",0))    
+                //            ));
 
-                //Console.WriteLine();
+                //System.Console.Write(result_GroupJoin);
+                //result_GroupJoin.Save("_GroupJoin.xml");
 
-                //var xml = new XElement("LeftSeq", result_LeftSeqs.Select(x => new XElement(xpath_1,
-                //    new XAttribute(kpath_1, x.kpath), x.xpath)));
+                //System.Console.Write("\n\n");
 
-                //System.Console.Write(xml);
-                //xml.Save("_LeftSeq.xml");
 
                 Console.ReadKey();
 
