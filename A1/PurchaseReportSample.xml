@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PurchaseReport period="P3M" periodEnding="1999-12-31">
+    <parts>
+        <part type="Lawnmower"><partno>800-BB</partno></part>
+        <part type="Baby Monitor"><partno>800-AA</partno></part>
+        <part type="Lapis Necklace"><partno>890-AA</partno></part>
+		<part type="UFO"><partno>900-XX</partno></part>
+        <part type="Sturdy Shelves"><partno>455-BX</partno></part>
+    </parts>
+
+    <orders>
+        <partref quantity="3"><partno>890-AA</partno><zipcode>2000</zipcode></partref>
+        <partref quantity="1"><partno>800-AA</partno><zipcode>3000</zipcode></partref>
+        <partref quantity="2"><partno>800-AA</partno><zipcode>1000</zipcode></partref>
+		<partref quantity="1"><partno>800-AA</partno><zipcode>3000</zipcode></partref>
+		<partref quantity="4"><partno>455-BX</partno><zipcode>5000</zipcode></partref>
+		<partref><partno>455-BX</partno><zipcode></zipcode></partref>
+        <partref quantity="5"><partno>800-BB</partno><zipcode>4000</zipcode></partref>
+        <partref description="join_ghost"><partno>733-NN</partno><zipcode>2000</zipcode></partref>
+    </orders>
+</PurchaseReport>

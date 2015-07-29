@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Customers>
+  <Customer>
+    <CustomerID>ANCA</CustomerID>
+    <Name>Alex</Name>
+    <Age>4</Age>
+  </Customer>
+  <Customer>
+    <CustomerID>GGIM</CustomerID>
+    <Name>Georgy(Георгй)</Name>
+    <Age>58</Age>
+  </Customer>
+  <Customer>
+    <CustomerID>SMAN</CustomerID>
+    <Name>Mano</Name>
+    <Age>42</Age>
+  </Customer>
+  <Customer>
+    <CustomerID>XYIE</CustomerID>
+    <Name>Xinfeng</Name>
+    <Age>48</Age>
+  </Customer>
+  <Customer>
+    <CustomerID>ZWAN</CustomerID>
+    <Name>Zhengping(正平)</Name>
+    <Age>26</Age>
+  </Customer>
+  <Customer>
+    <CustomerID>anvo</CustomerID>
+    <Name>antony</Name>
+    <Age>33</Age>
+  </Customer>
+  <Customer>
+    <CustomerID>mlit</CustomerID>
+    <Name>michael(Михаил)</Name>
+    <Age>27</Age>
+  </Customer>
+</Customers>

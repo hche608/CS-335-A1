@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Orders>
+  <Order OrderID="4010" CID="pdel">cuda card</Order>
+  <Order OrderID="1020" CID="rnic">optical mouse</Order>
+  <Order OrderID="1010" CID="rnic">flash memory</Order>
+  <Order OrderID="2030" CID="sman">digital camera</Order>
+  <Order OrderID="2020" CID="sman">pocket pc</Order>
+  <Order OrderID="2010" CID="sman">iphone</Order>
+</Orders>
