@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using System.Net;
+using Newtonsoft.Json;
 
 namespace A1
 {
@@ -88,6 +90,7 @@ namespace A1
                     into lotJoin                    
                     from feed in lotJoin.DefaultIfEmpty()
                     orderby customer.Attribute(spath_1).Value ascending, feed == null ? String.Empty : feed.Attribute(kpath_2).Value ascending
+
                     select new XElement("Join",
                         new XElement(xpath_1,
                             new XAttribute(kpath_1, customer.Attribute(kpath_1).Value), customer.Value),
@@ -99,6 +102,37 @@ namespace A1
                 result_LeftOuterJoin.Save("_LeftOuterJoin.xml");
 
                 System.Console.Write("\n\n");
+
+                //try
+                //{
+                //    Console.WriteLine("WEB-JSON --> XML:\n");
+                //    string url = "http://services.odata.org/Northwind/Northwind.svc/Orders()?$orderby=OrderID desc&$select=OrderID,CustomerID,EmployeeID&$format=json";
+                //    using (var w =new WebClient()) 
+                //    {
+                //        var json_data = string.Empty;
+
+                //        try
+                //        {
+                //            json_data = w.DownloadString(url);
+                //            XDocument jsonDoc = JsonConvert.DeserializeXNode(json_data, "root");
+                //            Console.WriteLine(jsonDoc);
+                //            jsonDoc.Save("JsonFromWeb.xml");
+                //        }
+                //        catch (Exception e) 
+                //        {
+                //            Console.WriteLine("Fetching Json Data error: {0}\n\n", e);
+                //        }
+                //    }
+                //    //string json = "MyOrdersExtended.json";
+                //    //XDocument jsonDoc;
+                //    //jsonDoc = JsonConvert.DeserializeXNode(json, "root");
+                //    //Console.WriteLine(jsonDoc);
+                //}
+                //catch (Exception e)
+                //{
+                //    Console.WriteLine("Open Json file error: {0}\n\n", e);
+                //}
+                
 
                 //// GroupJoin
                 //var result_GroupJoin = new XElement("GroupJoin",
