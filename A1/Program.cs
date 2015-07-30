@@ -6,6 +6,7 @@ using System.Xml.Linq;
 using System.Text;
 using System.Net;
 using Newtonsoft.Json;
+using System.Xml;
 
 namespace A1
 {
@@ -14,27 +15,41 @@ namespace A1
         static void Main(string[] args)
         {
             string loc_1, fname_or_url_1, xpath_1, kpath_1, spath_1, loc_2, fname_or_url_2, xpath_2, kpath_2, spath_2;
-            loc_1 = "FILE-XML";
+            loc_1 = "/FILE-XML";
             fname_or_url_1 = "MyCustomers.xml";
-            xpath_1 = "Customer";
-            kpath_1 = "CustomerID";
-            spath_1 = "CustomerID";
+            xpath_1 = "Customers/Customer";
+            kpath_1 = "@CustomerID";
+            spath_1 = "@CustomerID";
 
-            loc_2 = "FILE-XML";
+            loc_2 = "/FILE-XML";
             fname_or_url_2 = "MyOrders.xml";
-            xpath_2 = "Order";
-            kpath_2 = "OrderID";
-            spath_2 = "CID";
+            xpath_2 = "Orders/Order";
+            kpath_2 = "@CID";
+            spath_2 = "@OrderID";
+
+            // read JSON directly from a file
+            var json_data = string.Empty;
+            try
+            {
+                json_data = File.ReadAllText("Orders.json");
+                XDocument jsonDoc = JsonConvert.DeserializeXNode(json_data, "root");
+                Console.WriteLine(jsonDoc);
+                jsonDoc.Save("JsonFromLocal.xml");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Fetching Json Data error: {0}\n\n", e);
+            }
+            
             try
             {
                 XDocument xDocLeft;
                 xDocLeft = XDocument.Load(fname_or_url_1);
-                //xDoc = XDocument.Parse(URL);
-
+                XElement xDocRoot = xDocLeft.Root;
                 // LeftSeqs
                 var result_LeftSeqs = new XElement("LeftSeq",
-                    from feed in xDocLeft.Descendants(xpath_1)
-                    orderby feed.Attribute(spath_1).Value ascending//, feed.Value ascending
+                    from feed in xDocRoot.XPathSelectElement(xpath_1)
+                    orderby feed.Attribute(spath_1).Value ascending
                     select new XElement(xpath_1,
                             new XAttribute(kpath_1, feed.Attribute(kpath_1).Value), feed.Value));
 
@@ -137,7 +152,7 @@ namespace A1
                 //{
                 //    Console.WriteLine("WEB-JSON --> XML:\n");
                 //    string url = "http://services.odata.org/Northwind/Northwind.svc/Orders()?$orderby=OrderID desc&$select=OrderID,CustomerID,EmployeeID&$format=json";
-                //    using (var w =new WebClient()) 
+                //    using (var w = new WebClient())
                 //    {
                 //        var json_data = string.Empty;
 
@@ -148,7 +163,7 @@ namespace A1
                 //            Console.WriteLine(jsonDoc);
                 //            jsonDoc.Save("JsonFromWeb.xml");
                 //        }
-                //        catch (Exception e) 
+                //        catch (Exception e)
                 //        {
                 //            Console.WriteLine("Fetching Json Data error: {0}\n\n", e);
                 //        }
