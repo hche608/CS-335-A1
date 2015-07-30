@@ -6,7 +6,7 @@ using System.Xml.Linq;
 using System.Text;
 using System.Net;
 using Newtonsoft.Json;
-using System.Xml;
+using System.Xml.XPath;
 
 namespace A1
 {
@@ -27,28 +27,44 @@ namespace A1
             kpath_2 = "@CID";
             spath_2 = "@OrderID";
 
-            // read JSON directly from a file
-            var json_data = string.Empty;
+            //// read JSON directly from a file
+            //var json_data = string.Empty;
+            //try
+            //{
+            //    json_data = File.ReadAllText("Orders.json");
+            //    XDocument jsonDoc = JsonConvert.DeserializeXNode(json_data, "root");
+            //    Console.WriteLine(jsonDoc);
+            //    jsonDoc.Save("JsonFromLocal.xml");
+            //}
+            //catch (Exception e)
+            //{
+            //    Console.WriteLine("Fetching Json Data error: {0}\n\n", e);
+            //}
+
+
+            var namespaceManager = new XmlNamespaceManager(new NameTable());
+            namespaceManager.AddNamespace("empty", "http://demo.com/2011/demo-schema");
+            var name = document.XPathSelectElement("/empty:Report/empty:ReportInfo/empty:Name", namespaceManager).Value;
+
+            var xDocTest = XDocument.Load(fname_or_url_1);
+
+
+
+
+            Console.ReadKey();
+
+            /*
             try
             {
-                json_data = File.ReadAllText("Orders.json");
-                XDocument jsonDoc = JsonConvert.DeserializeXNode(json_data, "root");
-                Console.WriteLine(jsonDoc);
-                jsonDoc.Save("JsonFromLocal.xml");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Fetching Json Data error: {0}\n\n", e);
-            }
-            
-            try
-            {
+
+
+
                 XDocument xDocLeft;
                 xDocLeft = XDocument.Load(fname_or_url_1);
-                XElement xDocRoot = xDocLeft.Root;
+
                 // LeftSeqs
                 var result_LeftSeqs = new XElement("LeftSeq",
-                    from feed in xDocRoot.XPathSelectElement(xpath_1)
+                    from feed in xDocLeft.Descendants(xpath_1)
                     orderby feed.Attribute(spath_1).Value ascending
                     select new XElement(xpath_1,
                             new XAttribute(kpath_1, feed.Attribute(kpath_1).Value), feed.Value));
@@ -185,7 +201,7 @@ namespace A1
             {
                 Console.WriteLine("XML does not exist. {0}", e);
                 Console.ReadKey();
-            }
+            }*/
         }
     }
 }
