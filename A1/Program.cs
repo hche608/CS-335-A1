@@ -20,77 +20,94 @@ namespace A1
             xpath_1 = "Customers/Customer";
             kpath_1 = "@CustomerID";
             spath_1 = "@CustomerID";
+            XDocument xDocLeft = new XDocument();
 
-            loc_2 = "/FILE-XML";
-            fname_or_url_2 = "MyOrders.xml";
-            xpath_2 = "Orders/Order";
-            kpath_2 = "@CID";
-            spath_2 = "@OrderID";
+            loc_2 = "/FILE-JSON";
+            fname_or_url_2 = "Orders.json";
+            xpath_2 = "root/value";
+            kpath_2 = "OrderID";
+            spath_2 = "OrderID";
+            XDocument xDocRight = new XDocument();
 
-            //// read JSON directly from a file
-            //var json_data = string.Empty;
-            //try
-            //{
-            //    json_data = File.ReadAllText("Orders.json");
-            //    XDocument jsonDoc = JsonConvert.DeserializeXNode(json_data, "root");
-            //    Console.WriteLine(jsonDoc);
-            //    jsonDoc.Save("JsonFromLocal.xml");
-            //}
-            //catch (Exception e)
-            //{
-            //    Console.WriteLine("Fetching Json Data error: {0}\n\n", e);
-            //}
+            switch (loc_1)
+            {
+                case "/FILE-JSON":
+                    // FILE-JSON ==> XML            
+                    try
+                    {
+                        var json_data = string.Empty;
+                        json_data = File.ReadAllText(fname_or_url_1);
+                        xDocLeft = JsonConvert.DeserializeXNode(json_data, "root");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Loading Json Data error: {0}\n\n", e);
+                    }
+                    break;
+                case "/URL-JSON":
+                    xDocLeft = XDocument.Load(fname_or_url_1);
+                    break;
+                default:
+                    xDocLeft = XDocument.Load(fname_or_url_1);
+                    break;
+            }
+
+            switch (loc_2)
+            {
+                case "/FILE-JSON":
+                    try
+                    {
+                        var json_data = string.Empty;
+                        json_data = File.ReadAllText(fname_or_url_2);
+                        xDocRight = (XDocument)JsonConvert.DeserializeXNode(json_data,"root");
+                        xDocRight.Save("JsonToXML.xml");
+                        Console.WriteLine("Loaded a Json file.\n");
+                        Console.WriteLine(xDocRight.XPathSelectElement("root/value").Name + "\n\n");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Loading Json Data error: {0}\n\n", e);
+                    }
+                    break;
+                case "/URL-JSON":
+                    xDocRight = XDocument.Load(fname_or_url_2);
+                    break;
+                default:
+                    xDocRight = XDocument.Load(fname_or_url_2);
+                    break;
+            }
 
 
-            var namespaceManager = new XmlNamespaceManager(new NameTable());
-            namespaceManager.AddNamespace("empty", "http://demo.com/2011/demo-schema");
-            var name = document.XPathSelectElement("/empty:Report/empty:ReportInfo/empty:Name", namespaceManager).Value;
+            // LeftSeqs
+            var result_LeftSeqs = new XElement("LeftSeq",
+                from feed in xDocLeft.XPathSelectElements(xpath_1)
+                orderby feed.LastAttribute.Value
+                select new XElement(feed.Name,
+                    new XAttribute(feed.FirstAttribute.Name, feed.FirstAttribute.Value), feed.Value));
+            //System.Console.Write(result_LeftSeqs);
+            result_LeftSeqs.Save("_LeftSeq.xml");
 
-            var xDocTest = XDocument.Load(fname_or_url_1);
-
-
-
-
+            //System.Console.Write("\nDone Left\n");
             Console.ReadKey();
+            // RightSeqs
+
+            
+
+            var result_RightSeqs = new XElement("RightSeq",
+                from feed in xDocRight.XPathSelectElements("value")
+                orderby feed.FirstAttribute.Value
+                select new XElement(feed.Name,
+                        new XAttribute(feed.FirstAttribute.Name, feed.FirstAttribute.Value),
+                        new XAttribute(feed.LastAttribute.Name, feed.LastAttribute.Value), feed.Value));
+
+            System.Console.Write(result_RightSeqs);
+            result_RightSeqs.Save("_RightSeq.xml");
+
+            System.Console.Write("\n\n");
 
             /*
             try
             {
-
-
-
-                XDocument xDocLeft;
-                xDocLeft = XDocument.Load(fname_or_url_1);
-
-                // LeftSeqs
-                var result_LeftSeqs = new XElement("LeftSeq",
-                    from feed in xDocLeft.Descendants(xpath_1)
-                    orderby feed.Attribute(spath_1).Value ascending
-                    select new XElement(xpath_1,
-                            new XAttribute(kpath_1, feed.Attribute(kpath_1).Value), feed.Value));
-
-                System.Console.Write(result_LeftSeqs);
-                result_LeftSeqs.Save("_LeftSeq.xml");
-
-                System.Console.Write("\n\n");
-
-                // RightSeqs
-                XDocument xDocRight;
-                xDocRight = XDocument.Load(fname_or_url_2);
-
-                var result_RightSeqs = new XElement("RightSeq",
-                    from feed in xDocRight.Descendants(xpath_2)
-                    orderby feed.Attribute(kpath_2).Value ascending
-
-                    select new XElement(xpath_2,
-                            new XAttribute(kpath_2, feed.Attribute(kpath_2).Value),
-                            new XAttribute(spath_2, feed.Attribute(spath_2).Value), feed.Value)
-                            );
-
-                System.Console.Write(result_RightSeqs);
-                result_RightSeqs.Save("_RightSeq.xml");
-
-                System.Console.Write("\n\n");
 
                 // Inner Join
                 var result_InnerJoin = new XElement("InnerJoin",
