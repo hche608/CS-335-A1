@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,20 +15,35 @@ namespace A1
         static void Main(string[] args)
         {
             string loc_1, fname_or_url_1, xpath_1, kpath_1, spath_1, loc_2, fname_or_url_2, xpath_2, kpath_2, spath_2;
+
+            loc_1 = args[0];
+            fname_or_url_1 = args[1];
+            xpath_1 = args[2];
+            kpath_1 = args[3];
+            spath_1 = args[4];
+            var xDocLeft = new XDocument();
+
+            loc_2 = args[5];
+            fname_or_url_2 = args[6];
+            xpath_2 = args[7];
+            kpath_2 = args[8];
+            spath_2 = args[9];
+            var xDocRight = new XDocument();
+            /*
             loc_1 = "/FILE-XML";
             fname_or_url_1 = "MyCustomers.xml";
             xpath_1 = "Customers/Customer";
             kpath_1 = "@CustomerID";
             spath_1 = "@CustomerID";
-            XDocument xDocLeft = new XDocument();
+            var xDocLeft = new XDocument();
 
             loc_2 = "/FILE-JSON";
             fname_or_url_2 = "Orders.json";
             xpath_2 = "root/value";
             kpath_2 = "OrderID";
             spath_2 = "OrderID";
-            XDocument xDocRight = new XDocument();
-
+            var xDocRight = new XDocument();
+            */
             switch (loc_1)
             {
                 case "/FILE-JSON":
@@ -45,7 +60,59 @@ namespace A1
                     }
                     break;
                 case "/URL-JSON":
-                    xDocLeft = XDocument.Load(fname_or_url_1);
+                    //xDocLeft = XDocument.Load(fname_or_url_1);
+
+
+                    try
+                    {
+                        Console.WriteLine("WEB-JSON --> XML:\n");
+                        string server = "http://services.odata.org/Northwind/Northwind.svc/";
+                        string order = "Orders()?$orderby=OrderID desc&$select=OrderID,CustomerID,EmployeeID";
+                        string format = "&$format=json";
+                        string url = server + order + format;
+
+                        var combinedxml = new XDocument();
+
+                        using (var w = new System.Net.WebClient())
+                        {
+                            var json_data = string.Empty;
+                            try
+                            {
+                                json_data = w.DownloadString(url);
+                                XDocument xml1 = Newtonsoft.Json.JsonConvert.DeserializeXNode(json_data, "root");
+                                combinedxml.Root.Add(xml1.Descendants("root"));
+                            nextLine:
+                                if (xml1.XPathSelectElement("//odata.nextLink") != null)
+                                {
+                                    url = server + xml1.XPathSelectElement("//odata.nextLink").Value + format;
+                                    xml1.XPathSelectElement("//odata.nextLink").Remove();
+                                    json_data = w.DownloadString(url);
+                                    XDocument xml2 = Newtonsoft.Json.JsonConvert.DeserializeXNode(json_data, "root");
+                                    xml1 = xml1.Descendants("root").Union(xml2.Descendants("root"));
+                                    var xmlcombined = xml1.Descendants("root").Union(xml2.Descendants("root"));
+
+                                    goto nextLine;
+                                }
+
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine("Fetching Json Data error: {0}\n\n", e);
+                            }
+                        }
+
+                        //string json = "MyOrdersExtended.json";
+                        //XDocument jsonDoc;
+                        //jsonDoc = JsonConvert.DeserializeXNode(json, "root");
+                        //Console.WriteLine(jsonDoc);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Open Json file error: {0}\n\n", e);
+                    }
+
+                    Console.ReadKey();
+
                     break;
                 default:
                     xDocLeft = XDocument.Load(fname_or_url_1);
@@ -59,7 +126,7 @@ namespace A1
                     {
                         var json_data = string.Empty;
                         json_data = File.ReadAllText(fname_or_url_2);
-                        xDocRight = (XDocument)JsonConvert.DeserializeXNode(json_data,"root");
+                        xDocRight = (XDocument)JsonConvert.DeserializeXNode(json_data, "root");
                         xDocRight.Save("JsonToXML.xml");
                         Console.WriteLine("Loaded a Json file.\n");
                         Console.WriteLine(xDocRight.XPathSelectElement("root/value").Name + "\n\n");
@@ -70,7 +137,7 @@ namespace A1
                     }
                     break;
                 case "/URL-JSON":
-                    xDocRight = XDocument.Load(fname_or_url_2);
+                    //xDocRight = XDocument.Load(fname_or_url_2);
                     break;
                 default:
                     xDocRight = XDocument.Load(fname_or_url_2);
@@ -79,31 +146,46 @@ namespace A1
 
 
             // LeftSeqs
-            var result_LeftSeqs = new XElement("LeftSeq",
-                from feed in xDocLeft.XPathSelectElements(xpath_1)
-                orderby feed.LastAttribute.Value
-                select new XElement(feed.Name,
-                    new XAttribute(feed.FirstAttribute.Name, feed.FirstAttribute.Value), feed.Value));
+            //var xDoc = XDocument.Load(fname_or_url_1);
+            IOrderedEnumerable<XElement> nodes;
+            switch (spath_1.Substring(0, 1))
+            {
+                case "@":
+                    nodes = from feed in xDocLeft.XPathSelectElements(xpath_1)
+                            orderby feed.Attribute(spath_1.Substring(1, spath_1.Length - 1)).Value
+                            select feed;
+                    break;
+                default:
+                    nodes = from feed in xDocLeft.XPathSelectElements(xpath_1)
+                            orderby feed.Value
+                            select feed;
+                    break;
+            }
+            var result_LeftSeqs = new XElement("LeftSeq", nodes);
+
             //System.Console.Write(result_LeftSeqs);
             result_LeftSeqs.Save("_LeftSeq.xml");
 
-            //System.Console.Write("\nDone Left\n");
-            Console.ReadKey();
             // RightSeqs
+            //xDoc = XDocument.Load(fname_or_url_2);
+            //IOrderedEnumerable<XElement> nodes;
+            switch (spath_2.Substring(0, 1))
+            {
+                case "@":
+                    nodes = from feed in xDocRight.XPathSelectElements(xpath_2)
+                            orderby feed.Attribute(spath_2.Substring(1, spath_2.Length - 1)).Value
+                            select feed;
+                    break;
+                default:
+                    nodes = from feed in xDocRight.XPathSelectElements(xpath_2)
+                            orderby feed.Value
+                            select feed;
+                    break;
+            }
+            var result_RightSeqs = new XElement("RightSeq", nodes);
 
-            
-
-            var result_RightSeqs = new XElement("RightSeq",
-                from feed in xDocRight.XPathSelectElements("value")
-                orderby feed.FirstAttribute.Value
-                select new XElement(feed.Name,
-                        new XAttribute(feed.FirstAttribute.Name, feed.FirstAttribute.Value),
-                        new XAttribute(feed.LastAttribute.Name, feed.LastAttribute.Value), feed.Value));
-
-            System.Console.Write(result_RightSeqs);
+            //System.Console.Write(result_LeftSeqs);
             result_RightSeqs.Save("_RightSeq.xml");
-
-            System.Console.Write("\n\n");
 
             /*
             try
@@ -179,40 +261,7 @@ namespace A1
                 result_GroupJoin.Save("_GroupJoin.xml");
 
                 System.Console.Write("\n\n");
-
-
-                //try
-                //{
-                //    Console.WriteLine("WEB-JSON --> XML:\n");
-                //    string url = "http://services.odata.org/Northwind/Northwind.svc/Orders()?$orderby=OrderID desc&$select=OrderID,CustomerID,EmployeeID&$format=json";
-                //    using (var w = new WebClient())
-                //    {
-                //        var json_data = string.Empty;
-
-                //        try
-                //        {
-                //            json_data = w.DownloadString(url);
-                //            XDocument jsonDoc = JsonConvert.DeserializeXNode(json_data, "root");
-                //            Console.WriteLine(jsonDoc);
-                //            jsonDoc.Save("JsonFromWeb.xml");
-                //        }
-                //        catch (Exception e)
-                //        {
-                //            Console.WriteLine("Fetching Json Data error: {0}\n\n", e);
-                //        }
-                //    }
-                //    //string json = "MyOrdersExtended.json";
-                //    //XDocument jsonDoc;
-                //    //jsonDoc = JsonConvert.DeserializeXNode(json, "root");
-                //    //Console.WriteLine(jsonDoc);
-                //}
-                //catch (Exception e)
-                //{
-                //    Console.WriteLine("Open Json file error: {0}\n\n", e);
-                //}
-
-                Console.ReadKey();
-
+         
             }
             catch (FileNotFoundException e)
             {
