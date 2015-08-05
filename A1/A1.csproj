@@ -48,6 +48,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="A1.linq" />
     <None Include="App.config" />
     <None Include="MyOrdersExtended.json" />
     <None Include="Orders.json" />
