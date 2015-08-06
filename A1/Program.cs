@@ -44,6 +44,10 @@ namespace A1
             spath_2 = "OrderID";
             var xDocRight = new XDocument();
             */
+
+
+
+
             switch (loc_1)
             {
                 case "/FILE-JSON":
@@ -63,52 +67,39 @@ namespace A1
                     //xDocLeft = XDocument.Load(fname_or_url_1);
 
 
-                    try
+                    using (var w = new System.Net.WebClient())
                     {
-                        Console.WriteLine("WEB-JSON --> XML:\n");
                         string server = "http://services.odata.org/Northwind/Northwind.svc/";
                         string order = "Orders()?$orderby=OrderID desc&$select=OrderID,CustomerID,EmployeeID";
                         string format = "&$format=json";
                         string url = server + order + format;
-
-                        var combinedxml = new XDocument();
-
-                        using (var w = new System.Net.WebClient())
+                        var json_data = string.Empty;
+                        try
                         {
-                            var json_data = string.Empty;
-                            try
+                            var fullXml = new XDocument();
+                            json_data = w.DownloadString(url);
+                            XDocument xml = Newtonsoft.Json.JsonConvert.DeserializeXNode(json_data, "root");
+
+                        nextLine:
+                            if (xml.XPathSelectElement("//odata.nextLink") != null)
                             {
+                                
+                                url = server + xml.XPathSelectElement("//odata.nextLink").Value + format;
+                                xml.XPathSelectElement("//odata.nextLink").Remove();
+
+
                                 json_data = w.DownloadString(url);
-                                XDocument xml1 = Newtonsoft.Json.JsonConvert.DeserializeXNode(json_data, "root");
-                                combinedxml.Root.Add(xml1.Descendants("root"));
-                            nextLine:
-                                if (xml1.XPathSelectElement("//odata.nextLink") != null)
-                                {
-                                    url = server + xml1.XPathSelectElement("//odata.nextLink").Value + format;
-                                    xml1.XPathSelectElement("//odata.nextLink").Remove();
-                                    json_data = w.DownloadString(url);
-                                    XDocument xml2 = Newtonsoft.Json.JsonConvert.DeserializeXNode(json_data, "root");
-                                    xml1 = xml1.Descendants("root").Union(xml2.Descendants("root"));
-                                    var xmlcombined = xml1.Descendants("root").Union(xml2.Descendants("root"));
+                                xml = Newtonsoft.Json.JsonConvert.DeserializeXNode(json_data, "root");
 
-                                    goto nextLine;
-                                }
 
+                                goto nextLine;
                             }
-                            catch (Exception e)
-                            {
-                                Console.WriteLine("Fetching Json Data error: {0}\n\n", e);
-                            }
+
                         }
-
-                        //string json = "MyOrdersExtended.json";
-                        //XDocument jsonDoc;
-                        //jsonDoc = JsonConvert.DeserializeXNode(json, "root");
-                        //Console.WriteLine(jsonDoc);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("Open Json file error: {0}\n\n", e);
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("Fetching Json Data error: {0}\n\n", e);
+                        }
                     }
 
                     Console.ReadKey();
