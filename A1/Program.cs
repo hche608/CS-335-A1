@@ -138,6 +138,8 @@ namespace A1
 
             // LeftSeqs
             //var xDoc = XDocument.Load(fname_or_url_1);
+
+            var test = leftXDoc.XPathSelectElements(xpath_1).ToList().OrderBy(el => (String)el.XPathSelectElement(""), StringComparer.Ordinal);
             IOrderedEnumerable<XElement> nodes;
             switch (spath_1.Substring(0, 1))
             {
@@ -152,6 +154,7 @@ namespace A1
                             select feed;
                     break;
             }
+
             var result_LeftSeqs = new XElement("LeftSeq", nodes);
 
             //System.Console.Write(result_LeftSeqs);
