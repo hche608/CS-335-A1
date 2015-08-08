@@ -38,6 +38,8 @@ namespace A1
                 return result;
             };
 
+
+
             Func<String, XDocument> loadjson = delegate(String s)
             {
                 var json_data = string.Empty;
@@ -46,43 +48,45 @@ namespace A1
                 return result;
             };
 
+
+            Action<String, String, String, List<XElement>> getUrlJson = null;
+            getUrlJson = delegate(String server, String order, String format, List<XElement> nodes)
+            {
+                var w = new System.Net.WebClient();
+                XDocument xml = Newtonsoft.Json.JsonConvert.DeserializeXNode(w.DownloadString(server+order+format), "root");
+                if (xml.XPathSelectElement("//odata.nextLink") != null)
+                {
+                    order = xml.XPathSelectElement("//odata.nextLink").Value;
+                    xml.XPathSelectElement("//odata.nextLink").Remove();
+                    xml.XPathSelectElement("//odata.metadata").Remove();
+                    nodes.AddRange(xml.XPathSelectElements("root/value"));
+                    getUrlJson(server, order, format, nodes);
+                };
+                nodes.AddRange(xml.XPathSelectElements("root/value"));
+            };
+
+
             Func<String, XDocument> loadurl = delegate(String s)
             {
                 string server = @"http://services.odata.org/Northwind/Northwind.svc/";
                 string order = "Orders()?$orderby=OrderID desc&$select=OrderID,CustomerID,EmployeeID";
                 string format = "&$format=json";
-                string url = server + order + format;
-
-                List<XElement> nodes = new List<XElement>();
-                var w = new System.Net.WebClient();
-                XDocument xml = Newtonsoft.Json.JsonConvert.DeserializeXNode(w.DownloadString(url), "root");
-
-            nextLine:
-                if (xml.XPathSelectElement("//odata.nextLink") != null)
-                {
-                    url = server + xml.XPathSelectElement("//odata.nextLink").Value + format;
-                    xml.XPathSelectElement("//odata.nextLink").Remove();
-                    xml.XPathSelectElement("//odata.metadata").Remove();
-                    nodes.AddRange(xml.XPathSelectElements("root/value"));
-                    xml = Newtonsoft.Json.JsonConvert.DeserializeXNode(w.DownloadString(url), "root");
-                    goto nextLine;
-                }
-                nodes.AddRange(xml.XPathSelectElements("root/value"));
+                List<XElement> nodes = new List<XElement>();            
+                getUrlJson(server,order,format,nodes);
+                server.Replace()
                 XDocument result = new XDocument(new XElement("root", nodes));
-                return result;
+                return result;          
             };
 
-            Func<String, String, String, XDocument, XDocument> orderByKey = delegate(String title, String xpath, String key, XDocument xDoc)
+            Func<String, String, String, XDocument, XDocument> orderByKey = delegate(String title, String xpath, String spath, XDocument xDoc)
             {
-                XDocument result = new XDocument();
-                if (key.Substring(0, 1) == "@")
-                    result = new XDocument(new XElement(title, xDoc.XPathSelectElements(xpath).OrderBy(atr => (String)atr.Attribute(key.Substring(1, key.Length - 1)).Value, StringComparer.Ordinal)));
-                else
-                    result = new XDocument(new XElement(title, xDoc.XPathSelectElements(xpath).OrderBy(el => (String)el.XPathSelectElement(key), StringComparer.Ordinal)));
+                XDocument result = new XDocument(new XElement(title, xDoc.XPathSelectElements(xpath).OrderBy(
+                    v => (spath.Contains("@") ? 
+                        (v.Attribute(spath.Substring(1, spath.Length - 1)) == null ? String.Empty : v.Attribute(spath.Substring(1, spath.Length - 1)).Value) : 
+                        ( v == null ? String.Empty : v.Value)), StringComparer.Ordinal)));
                 result.Save("_" + title + ".xml");
                 return result;
             };
-
 
             if (loc_1 == "/FILE-JSON")
                 xDocLeft = loadjson(fname_or_url_1);
@@ -101,30 +105,23 @@ namespace A1
             xDocLeft = orderByKey("LeftSeq", xpath_1, spath_1, xDocLeft);
             // RightSeqs
             xDocRight = orderByKey("RightSeq", xpath_2, spath_2, xDocRight);
+            // Inner Join
+            //XDocument result_InnerJoin = new XDocument(new XElement("InnerJoin",
+            //    from lSide in xDocLeft.XPathSelectElements("/*/Customer")
+            //    join rSide in xDocRight.XPathSelectElements("/*/Order")
+            //    on (string)lSide.Attribute("CustomerID")
+            //    equals
+            //    (string)rSide.Attribute("CID")
+            //    select new XElement("Join", lSide, rSide)));
+            //result_InnerJoin.Save("_InnerJoin.xml");
+
 
             /*
             try
             {
 
                 // Inner Join
-                var result_InnerJoin = new XElement("InnerJoin",
-                    from customer in xDocLeft.Descendants(xpath_1)
-                    join order in xDocRight.Descendants(xpath_2)
-                    on (string)customer.Attribute(spath_1)
-                    equals
-                    (string)order.Attribute(spath_2)
-                    orderby customer.Attribute(spath_1).Value ascending, order.Attribute(kpath_2).Value ascending
-                    select new XElement("Join",
-                        new XElement(xpath_1,
-                            new XAttribute(kpath_1, customer.Attribute(kpath_1).Value), customer.Value),
-                        new XElement(xpath_2,
-                            new XAttribute(kpath_2, order.Attribute(kpath_2).Value),
-                            new XAttribute(spath_2, order.Attribute(spath_2).Value), order.Value)));
 
-                System.Console.Write(result_InnerJoin);
-                result_InnerJoin.Save("_InnerJoin.xml");
-
-                System.Console.Write("\n\n");
 
                 // LeftOuterJoin
                 var result_LeftOuterJoin = 
