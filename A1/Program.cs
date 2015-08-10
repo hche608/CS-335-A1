@@ -7,6 +7,7 @@ using System.Text;
 using System.Net;
 using Newtonsoft.Json;
 using System.Xml.XPath;
+using System.Text.RegularExpressions;
 
 namespace A1
 {
@@ -32,58 +33,51 @@ namespace A1
             spath_2 = args[9];
             XDocument xDocRight = new XDocument();
 
-            Func<String, XDocument> loadxml = delegate(String s)
+            Func<String, XDocument> loadxml = delegate (String s)
             {
-                XDocument result = XDocument.Load(s);
-                return result;
+                return XDocument.Load(s);
             };
 
-
-
-            Func<String, XDocument> loadjson = delegate(String s)
+            Func<String, XDocument> loadjson = delegate (String s)
             {
                 var json_data = string.Empty;
                 json_data = File.ReadAllText(s);
-                XDocument result = Newtonsoft.Json.JsonConvert.DeserializeXNode(json_data, "root");
-                return result;
+                return Newtonsoft.Json.JsonConvert.DeserializeXNode(json_data, "root");
             };
-
 
             Action<String, String, String, List<XElement>> getUrlJson = null;
-            getUrlJson = delegate(String server, String order, String format, List<XElement> nodes)
+            getUrlJson = delegate (String s, String o, String f, List<XElement> nodes)
             {
                 var w = new System.Net.WebClient();
-                XDocument xml = Newtonsoft.Json.JsonConvert.DeserializeXNode(w.DownloadString(server+order+format), "root");
+                XDocument xml = Newtonsoft.Json.JsonConvert.DeserializeXNode(w.DownloadString(s + o + f), "root");
                 if (xml.XPathSelectElement("//odata.nextLink") != null)
                 {
-                    order = xml.XPathSelectElement("//odata.nextLink").Value;
+                    o = xml.XPathSelectElement("//odata.nextLink").Value;
                     xml.XPathSelectElement("//odata.nextLink").Remove();
-                    xml.XPathSelectElement("//odata.metadata").Remove();
                     nodes.AddRange(xml.XPathSelectElements("root/value"));
-                    getUrlJson(server, order, format, nodes);
-                };
-                nodes.AddRange(xml.XPathSelectElements("root/value"));
+                    getUrlJson(s, o, f, nodes);
+                }
+                else
+                    nodes.AddRange(xml.XPathSelectElements("root/value"));
             };
 
-
-            Func<String, XDocument> loadurl = delegate(String s)
+            Func<String, XDocument> loadurl = delegate (String s)
             {
                 string server = @"http://services.odata.org/Northwind/Northwind.svc/";
                 string order = "Orders()?$orderby=OrderID desc&$select=OrderID,CustomerID,EmployeeID";
                 string format = "&$format=json";
-                List<XElement> nodes = new List<XElement>();            
-                getUrlJson(server,order,format,nodes);
-                server.Replace()
+                List<XElement> nodes = new List<XElement>();
+                getUrlJson(server, order, format, nodes);
                 XDocument result = new XDocument(new XElement("root", nodes));
-                return result;          
+                return result;
             };
 
-            Func<String, String, String, XDocument, XDocument> orderByKey = delegate(String title, String xpath, String spath, XDocument xDoc)
+            Func<String, String, String, XDocument, XDocument> orderByKey = delegate (String title, String xpath, String spath, XDocument xDoc)
             {
                 XDocument result = new XDocument(new XElement(title, xDoc.XPathSelectElements(xpath).OrderBy(
-                    v => (spath.Contains("@") ? 
-                        (v.Attribute(spath.Substring(1, spath.Length - 1)) == null ? String.Empty : v.Attribute(spath.Substring(1, spath.Length - 1)).Value) : 
-                        ( v == null ? String.Empty : v.Value)), StringComparer.Ordinal)));
+                    v => (spath.Contains("@") ?
+                        (v.Attribute(spath.Substring(1, spath.Length - 1)) == null ? String.Empty : v.Attribute(spath.Substring(1, spath.Length - 1)).Value) :
+                        (v.Value == null ? String.Empty : v.XPathSelectElement(spath).Value)), StringComparer.Ordinal)));
                 result.Save("_" + title + ".xml");
                 return result;
             };
@@ -106,80 +100,34 @@ namespace A1
             // RightSeqs
             xDocRight = orderByKey("RightSeq", xpath_2, spath_2, xDocRight);
             // Inner Join
-            //XDocument result_InnerJoin = new XDocument(new XElement("InnerJoin",
-            //    from lSide in xDocLeft.XPathSelectElements("/*/Customer")
-            //    join rSide in xDocRight.XPathSelectElements("/*/Order")
-            //    on (string)lSide.Attribute("CustomerID")
-            //    equals
-            //    (string)rSide.Attribute("CID")
-            //    select new XElement("Join", lSide, rSide)));
-            //result_InnerJoin.Save("_InnerJoin.xml");
+            XDocument result_InnerJoin = new XDocument(new XElement("InnerJoin",
+                from lSide in xDocLeft.XPathSelectElements("LeftSeq/*")
+                join rSide in xDocRight.XPathSelectElements("RightSeq/*")
+                on (string)(kpath_1.Contains('@') ? (lSide.Attribute(kpath_1.Substring(1, kpath_1.Length - 1)) == null ? String.Empty : lSide.Attribute(kpath_1.Substring(1, kpath_1.Length - 1)).Value) :
+                (lSide == null ? String.Empty : lSide.XPathSelectElement(kpath_1).Value))
+                equals
+                (kpath_2.Contains('@') ? (rSide.Attribute(kpath_2.Substring(1, kpath_2.Length - 1)) == null ? String.Empty : rSide.Attribute(kpath_2.Substring(1, kpath_2.Length - 1)).Value) :
+                (rSide == null ? String.Empty : rSide.XPathSelectElement(kpath_2).Value))
+                select new XElement("Join", lSide, rSide)));
+            result_InnerJoin.Save("_InnerJoin.xml");
+            // GroupJoin
+            var result_GroupBy =
+                result_InnerJoin.XPathSelectElements("InnerJoin/*")
+                .GroupBy(el => el.XPathSelectElement("Order").Attribute("CID").Value)
+                .GroupJoin(xDocLeft.XPathSelectElements("LeftSeq/*"),
+                grpB => grpB.Key.DefaultIfEmpty(),
+                lSide => lSide.Attribute("CustomerID").Value,
+                (grpB, lSide) => new { lSide, grpB }
+                );
 
+            var groupJoin =
+                xDocLeft.XPathSelectElements("LeftSeq/*").GroupJoin(result_InnerJoin.XPathSelectElements("InnerJoin/*")
+                .GroupBy(el => el.XPathSelectElement(xpath_2.Substring(xpath_2.IndexOf('/') + 1, xpath_2.Length - xpath_2.IndexOf('/') - 1)).Attribute("CID").Value),
+                lSide => (kpath_1.Contains('@') ? (lSide.Attribute(kpath_1.Substring(1, kpath_1.Length - 1)) == null ? String.Empty : lSide.Attribute(kpath_1.Substring(1, kpath_1.Length - 1)).Value) :
+                (lSide == null ? String.Empty : lSide.XPathSelectElement(kpath_1).Value)),
+                grpB => grpB.Key,
+                (lSide, grpB) => new { lSide, grpB });
 
-            /*
-            try
-            {
-
-                // Inner Join
-
-
-                // LeftOuterJoin
-                var result_LeftOuterJoin = 
-                    new XElement("LeftOuterJoin",
-                    from customer in xDocLeft.Descendants(xpath_1)
-                    join order in xDocRight.Descendants(xpath_2)
-                    on (string)customer.Attribute(spath_1)
-                    equals
-                    (string)order.Attribute(spath_2)
-                    into lotJoin                    
-                    from feed in lotJoin.DefaultIfEmpty()
-                    orderby customer.Attribute(spath_1).Value ascending, feed == null ? String.Empty : feed.Attribute(kpath_2).Value ascending
-                    select new XElement("Join",
-                        new XElement(xpath_1,
-                            new XAttribute(kpath_1, customer.Attribute(kpath_1).Value), customer.Value),
-                            new XElement(xpath_2,
-                                new XAttribute(kpath_2, feed == null ? String.Empty : feed.Attribute(kpath_2).Value),
-                                new XAttribute(spath_2, feed == null ? String.Empty : feed.Attribute(spath_2).Value), feed == null ? String.Empty : feed.Value)));
-                result_LeftOuterJoin.Descendants("Join").Elements(xpath_2).Where(x => x.Value == "").Remove();
-                System.Console.Write(result_LeftOuterJoin);
-
-                result_LeftOuterJoin.Save("_LeftOuterJoin.xml");
-                System.Console.Write("\n\n");
-
-                // GroupJoin
-                var result_GroupJoin = new XElement("GroupJoin",
-                                        //from customer in xDocLeft.Descendants(xpath_1)
-                                        from order in xDocRight.Descendants(xpath_2)
-                                        //on (string)customer.Attribute(spath_1)
-                                        //equals
-                                        //(string)order.Attribute(spath_2)
-                                        //orderby customer.Attribute(spath_1).Value ascending, order == null ? String.Empty : order.Attribute(kpath_2).Value ascending
-                                        group order by order.Attribute("CID").Value
-                                        into grped_order
-                                        join customer in xDocLeft.Descendants(xpath_1)
-                                        on (string)grped_order.Key
-                                        equals
-                                        (string)customer.Attribute(spath_2)
-                                        into gp
-                                        orderby grped_order.Key
-                                        select new XElement("Join",
-                                                    new XElement(xpath_1, 
-                                                        new XAttribute(kpath_1, grped_order.Key), ""),
-                                                    new XElement("Group", 
-                                                        new XAttribute("Count", grped_order.Count()), grped_order.DescendantsAndSelf())  
-                                            ));
-          
-                System.Console.Write(result_GroupJoin);
-                result_GroupJoin.Save("_GroupJoin.xml");
-
-                System.Console.Write("\n\n");
-         
-            }
-            catch (FileNotFoundException e)
-            {
-                Console.WriteLine("XML does not exist. {0}", e);
-                Console.ReadKey();
-            }*/
         }
     }
 }
