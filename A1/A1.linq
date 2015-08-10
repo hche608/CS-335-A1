@@ -1,5 +1,5 @@
 <Query Kind="Program">
-  <Reference Relative="Newtonsoft.Json.dll">C:\Users\hche608\Desktop\A1\Newtonsoft.Json.dll</Reference>
+  <Reference Relative="Newtonsoft.Json.dll">C:\Users\hche608\Source\Repos\cs-335\A1\Newtonsoft.Json.dll</Reference>
 </Query>
 
 void Main()
@@ -10,6 +10,16 @@ void Main()
     xpath_1 = "Customers/Customer";
     kpath_1 = "@CustomerID";
     spath_1 = "@CustomerID";
+	XDocument leftXDoc = XDocument.Load(fname_or_url_1);
+	
+	leftXDoc.XPathSelectElements(xpath_1).Dump("leftXDoc");
+	leftXDoc.XPathSelectElements("Customers/Customer/@CustomerID").Dump("What I Got");
+	var test = leftXDoc.XPathSelectElements(xpath_1).OrderBy( s => (String)s, StringComparer.Ordinal);
+	test.Dump("Test");
+	var result_LeftSeqs = new XElement("LeftSeq", from feed in leftXDoc.XPathSelectElements(xpath_1)
+                            orderby feed.Attribute(spath_1.Substring(1, spath_1.Length - 1)).Value
+                            select feed);
+	result_LeftSeqs.XPathSelectElements("/Customer").Dump("leftXDoc After Sort");
 	
 	Console.WriteLine("WEB-JSON --> XML:\n");
 	string server = "http://services.odata.org/Northwind/Northwind.svc/";
@@ -20,25 +30,23 @@ void Main()
 
 	using (var w = new System.Net.WebClient())
 	{
-		var json_data = string.Empty;
+		
 		try
 		{
-			json_data = w.DownloadString(url);
-			XDocument xml1 = Newtonsoft.Json.JsonConvert.DeserializeXNode(json_data, "root");
+			XDocument xml = Newtonsoft.Json.JsonConvert.DeserializeXNode(w.DownloadString(url), "root");
 			//xmlcombined.Root.Add(xml1.Descendants("root"));
 
 					
 			nextLine:
-			if(xml1.XPathSelectElement("//odata.nextLink") != null){
-				xml1.XPathSelectElement("//odata.nextLink").Value.Dump("NextLink");
-				url = server + xml1.XPathSelectElement("//odata.nextLink").Value + format;
-				xml1.XPathSelectElement("//odata.nextLink").Remove();
-				json_data = w.DownloadString(url);
-				xml1 = Newtonsoft.Json.JsonConvert.DeserializeXNode(json_data, "root");
-				xml1.Dump("Test");
-				//xmlcombined.Root.Add(xml1.Descendants("root"));
-				//xmlcombined.Dump("combined");
-				//xml1 = xmlcombined.Descendants("root");
+			if(xml.XPathSelectElement("//odata.nextLink") != null){
+				//xml.XPathSelectElement("//odata.nextLink").Value.Dump("NextLink");
+				url = server + xml.XPathSelectElement("//odata.nextLink").Value + format;
+				xml.XPathSelectElement("//odata.nextLink").Remove();
+				xml.XPathSelectElement("//odata.metadata").Remove();
+				xml.XPathSelectElements("root/value").Dump("Test");
+				
+				xml = Newtonsoft.Json.JsonConvert.DeserializeXNode(w.DownloadString(url), "root");
+				
 
 				goto nextLine;
 			}
