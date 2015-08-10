@@ -50,8 +50,13 @@
   <ItemGroup>
     <None Include="A1.linq" />
     <None Include="App.config" />
+    <None Include="Full.linq" />
+    <None Include="Json.linq" />
     <None Include="MyOrdersExtended.json" />
     <None Include="Orders.json" />
+    <None Include="Reg.linq" />
+    <None Include="Web.linq" />
+    <None Include="Xml.linq" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="MyCustomers.xml">

@@ -64,6 +64,15 @@ void Main()
                 return result;
             };
 
+            Func<XElement, String, String> selector = delegate(XElement x, String path)
+            {
+                var y = x.XPathEvaluate(path) as IEnumerable<object>;
+                if (y == null) return null;
+                dynamic z = y.FirstOrDefault();
+                if (z == null) return null;
+                return z.Value; // expected y : XElement or XAttribute
+            };
+			
             Func<String, String, String, XDocument, XDocument> orderByKey = delegate (String title, String xpath, String spath, XDocument xDoc)
             {
                 XDocument result = new XDocument(new XElement(title, xDoc.XPathSelectElements(xpath).OrderBy(
@@ -99,24 +108,18 @@ void Main()
             XDocument result_InnerJoin = new XDocument(new XElement("InnerJoin",
                 from lSide in xDocLeft.XPathSelectElements("LeftSeq/*")
                 join rSide in xDocRight.XPathSelectElements("RightSeq/*")
-                on (string)(kpath_1.Contains('@') ? (lSide.Attribute(kpath_1.Substring(1, kpath_1.Length - 1)) == null ? String.Empty : lSide.Attribute(kpath_1.Substring(1, kpath_1.Length - 1)).Value) :
-                (lSide == null ? String.Empty : lSide.XPathSelectElement(kpath_1).Value))
-                equals
-                (kpath_2.Contains('@') ? (rSide.Attribute(kpath_2.Substring(1, kpath_2.Length - 1)) == null ? String.Empty : rSide.Attribute(kpath_2.Substring(1, kpath_2.Length - 1)).Value) :
-                (rSide == null ? String.Empty : rSide.XPathSelectElement(kpath_2).Value))
+                on selector(lSide,kpath_1) equals selector(rSide, kpath_2)
                 select new XElement("Join", lSide, rSide)));
-			result_InnerJoin.XPathSelectElements("InnerJoin/Join/*").Dump("InnerJoin");
-			//result_InnerJoin.Save("_InnerJoin.xml");			
+			result_InnerJoin.Save("_InnerJoin.xml");			
 			
 			var groupJoin =
-                xDocLeft.XPathSelectElements("LeftSeq/*").GroupJoin(result_InnerJoin.XPathSelectElements("InnerJoin/*")
-                .GroupBy(el => el.XPathSelectElement(xpath_2.Substring(xpath_2.IndexOf('/') + 1,xpath_2.Length - xpath_2.IndexOf('/') - 1)).Attribute("CID").Value),
-                lSide => (kpath_1.Contains('@') ? (lSide.Attribute(kpath_1.Substring(1, kpath_1.Length - 1)) == null ? String.Empty : lSide.Attribute(kpath_1.Substring(1, kpath_1.Length - 1)).Value) :
-                (lSide == null ? String.Empty : lSide.XPathSelectElement(kpath_1).Value)),
-                grpB => grpB.Key,
-                (lSide,grpB) => new { lSide, grpB });
-			groupJoin.Dump("GroupJoin");	
-			
+                    xDocLeft.XPathSelectElements("LeftSeq/*").GroupJoin(xDocRight.XPathSelectElements("RightSeq/*"),
+                    lSide => selector(lSide, kpath_1),
+                    rSide => selector(rSide, kpath_2),
+                    (lSide, rSide) => new XElement("Join", lSide, new XElement("Group", new XAttribute("Count", rSide.Count()), rSide)));
+			XDocument result_GroupJoin = new XDocument(new XElement("GroupJoin", groupJoin));	
+			result_GroupJoin.Dump("G");
+			//result_GroupJoin.Save("_GroupJoin.xml");
 }
 
 // Define other methods and classes here

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
-using System.Text;
 using System.Net;
 using Newtonsoft.Json;
 using System.Xml.XPath;
@@ -42,14 +41,14 @@ namespace A1
             {
                 var json_data = string.Empty;
                 json_data = File.ReadAllText(s);
-                return Newtonsoft.Json.JsonConvert.DeserializeXNode(json_data, "root");
+                return JsonConvert.DeserializeXNode(json_data, "root");
             };
 
             Action<String, String, String, List<XElement>> getUrlJson = null;
             getUrlJson = delegate (String s, String o, String f, List<XElement> nodes)
             {
-                var w = new System.Net.WebClient();
-                XDocument xml = Newtonsoft.Json.JsonConvert.DeserializeXNode(w.DownloadString(s + o + f), "root");
+                var w = new WebClient();
+                XDocument xml = JsonConvert.DeserializeXNode(w.DownloadString(s + o + f), "root");
                 if (xml.XPathSelectElement("//odata.nextLink") != null)
                 {
                     o = xml.XPathSelectElement("//odata.nextLink").Value;
@@ -72,7 +71,7 @@ namespace A1
                 return result;
             };
 
-            Func<XElement, String, String> selector = delegate(XElement x, String path)
+            Func<XElement, String, String> selector = delegate (XElement x, String path)
             {
                 var y = x.XPathEvaluate(path) as IEnumerable<object>;
                 if (y == null) return null;
@@ -109,19 +108,17 @@ namespace A1
             XDocument result_InnerJoin = new XDocument(new XElement("InnerJoin",
                 from lSide in xDocLeft.XPathSelectElements("LeftSeq/*")
                 join rSide in xDocRight.XPathSelectElements("RightSeq/*")
-                on selector(lSide,kpath_1) equals selector(rSide, kpath_2)
+                on selector(lSide, kpath_1) equals selector(rSide, kpath_2)
                 select new XElement("Join", lSide, rSide)));
-            //result_InnerJoin.Save("_InnerJoin.xml");
+            result_InnerJoin.Save("_InnerJoin.xml");
             // GroupJoin
             var groupJoin =
-                    xDocLeft.XPathSelectElements("LeftSeq/*").GroupJoin(result_InnerJoin.XPathSelectElements("InnerJoin/*")
-                    .GroupBy(el => selector(el.XPathSelectElement(xpath_2.Replace(Regex.Match(xpath_2, @"\w+\/").Value, String.Empty)), kpath_2)),
-                    lSide => (kpath_1.Contains('@') ? (lSide.Attribute(kpath_1.Substring(1, kpath_1.Length - 1)) == null ? String.Empty : lSide.Attribute(kpath_1.Substring(1, kpath_1.Length - 1)).Value) :
-                    (lSide == null ? String.Empty : lSide.XPathSelectElement(kpath_1).Value)),
-                    grpB => grpB.Key,
-                    (lSide, grpB) => new XDocument(new XElement("GroupJoin", new XElement("Join", lSide, new XElement("Group", new XAttribute("Count", c => c.), grpB)))));
-
-            
+                    xDocLeft.XPathSelectElements("LeftSeq/*").GroupJoin(xDocRight.XPathSelectElements("RightSeq/*"),
+                    lSide => selector(lSide, kpath_1),
+                    rSide => selector(rSide, kpath_2),
+                    (lSide, rSide) => new XElement("Join", lSide, new XElement("Group", new XAttribute("Count", rSide.Count()), rSide)));
+            XDocument result_GroupJoin = new XDocument(new XElement("GroupJoin", groupJoin));
+            result_GroupJoin.Save("_GroupJoin.xml");
         }
     }
 }
