@@ -15,23 +15,6 @@ namespace A1
 
         static void Main(string[] args)
         {
-
-            string loc_1, fname_or_url_1, xpath_1, kpath_1, spath_1, loc_2, fname_or_url_2, xpath_2, kpath_2, spath_2;
-
-            loc_1 = args[0];
-            fname_or_url_1 = args[1];
-            xpath_1 = args[2];
-            kpath_1 = args[3];
-            spath_1 = args[4];
-            XDocument xDocLeft = new XDocument();
-
-            loc_2 = args[5];
-            fname_or_url_2 = args[6];
-            xpath_2 = args[7];
-            kpath_2 = args[8];
-            spath_2 = args[9];
-            XDocument xDocRight = new XDocument();
-
             Func<String, XDocument> loadxml = delegate (String s)
             {
                 return XDocument.Load(s);
@@ -48,16 +31,24 @@ namespace A1
             getUrlJson = delegate (String s, String o, String f, List<XElement> nodes)
             {
                 var w = new WebClient();
-                XDocument xml = JsonConvert.DeserializeXNode(w.DownloadString(s + o + f), "root");
-                if (xml.XPathSelectElement("//odata.nextLink") != null)
+                XDocument xml;
+                try
                 {
-                    o = xml.XPathSelectElement("//odata.nextLink").Value;
-                    xml.XPathSelectElement("//odata.nextLink").Remove();
-                    nodes.AddRange(xml.XPathSelectElements("root/value"));
-                    getUrlJson(s, o, f, nodes);
+                    xml = JsonConvert.DeserializeXNode(w.DownloadString(s + o + f), "root");
+                    if (xml.XPathSelectElement("//odata.nextLink") != null)
+                    {
+                        o = xml.XPathSelectElement("//odata.nextLink").Value;
+                        xml.XPathSelectElement("//odata.nextLink").Remove();
+                        nodes.AddRange(xml.XPathSelectElements("root/value"));
+                        getUrlJson(s, o, f, nodes);
+                    }
+                    else
+                        nodes.AddRange(xml.XPathSelectElements("root/value"));
                 }
-                else
-                    nodes.AddRange(xml.XPathSelectElements("root/value"));
+                catch (Exception)
+                {
+                    Console.WriteLine("");
+                }
             };
 
             Func<String, XDocument> loadurl = delegate (String s)
@@ -87,38 +78,79 @@ namespace A1
                 return result;
             };
 
-            if (loc_1 == "/FILE-JSON")
-                xDocLeft = loadjson(fname_or_url_1);
-            if (loc_2 == "/FILE-JSON")
-                xDocRight = loadjson(fname_or_url_2);
-            if (loc_1 == "/URL-JSON")
-                xDocLeft = loadurl(fname_or_url_1);
-            if (loc_2 == "/URL-JSON")
-                xDocRight = loadurl(fname_or_url_2);
-            if (loc_1 == "/FILE-XML")
-                xDocLeft = loadxml(fname_or_url_1);
-            if (loc_2 == "/FILE-XML")
-                xDocRight = loadxml(fname_or_url_2);
+            string loc_1, fname_or_url_1, xpath_1, kpath_1, spath_1, loc_2, fname_or_url_2, xpath_2, kpath_2, spath_2 = String.Empty;
+            XDocument xDocLeft = new XDocument();
+            XDocument xDocRight = new XDocument();
+            try
+            {
+                if (args.Count() < 9)
+                    throw new ArgumentException("too few command line arguments");
+                loc_1 = args[0];
+                fname_or_url_1 = args[1];
+                xpath_1 = args[2];
+                kpath_1 = args[3];
+                spath_1 = args[4];
 
-            // LeftSeqs
-            xDocLeft = orderByKey("LeftSeq", xpath_1, spath_1, xDocLeft);
-            // RightSeqs
-            xDocRight = orderByKey("RightSeq", xpath_2, spath_2, xDocRight);
-            // Inner Join
-            XDocument result_InnerJoin = new XDocument(new XElement("InnerJoin",
-                from lSide in xDocLeft.XPathSelectElements("LeftSeq/*")
-                join rSide in xDocRight.XPathSelectElements("RightSeq/*")
-                on selector(lSide, kpath_1) equals selector(rSide, kpath_2)
-                select new XElement("Join", lSide, rSide)));
-            result_InnerJoin.Save("_InnerJoin.xml");
-            // GroupJoin
-            var groupJoin =
-                    xDocLeft.XPathSelectElements("LeftSeq/*").GroupJoin(xDocRight.XPathSelectElements("RightSeq/*"),
-                    lSide => selector(lSide, kpath_1),
-                    rSide => selector(rSide, kpath_2),
-                    (lSide, rSide) => new XElement("Join", lSide, new XElement("Group", new XAttribute("Count", rSide.Count()), rSide)));
-            XDocument result_GroupJoin = new XDocument(new XElement("GroupJoin", groupJoin));
-            result_GroupJoin.Save("_GroupJoin.xml");
+                loc_2 = args[5];
+                fname_or_url_2 = args[6];
+                xpath_2 = args[7];
+                kpath_2 = args[8];
+                spath_2 = args[9];
+
+                if (loc_1 == "/FILE-JSON")
+                    xDocLeft = loadjson(fname_or_url_1);
+                else if (loc_1 == "/URL-JSON")
+                    xDocLeft = loadurl(fname_or_url_1);
+                else if (loc_1 == "/FILE-XML")
+                    xDocLeft = loadxml(fname_or_url_1);
+                else
+                    throw new FileNotFoundException("left file wrong location");
+
+                if (loc_2 == "/FILE-JSON")
+                    xDocRight = loadjson(fname_or_url_2);
+
+                else if (loc_2 == "/URL-JSON")
+                    xDocRight = loadurl(fname_or_url_2);
+
+                else if (loc_2 == "/FILE-XML")
+                    xDocRight = loadxml(fname_or_url_2);
+                else
+                    throw new FileNotFoundException("right file wrong location");
+
+                // LeftSeqs
+                xDocLeft = orderByKey("LeftSeq", xpath_1, spath_1, xDocLeft);
+                // RightSeqs
+                xDocRight = orderByKey("RightSeq", xpath_2, spath_2, xDocRight);
+                // Inner Join
+                XDocument result_InnerJoin = new XDocument(new XElement("InnerJoin",
+                    from lSide in xDocLeft.XPathSelectElements("LeftSeq/*")
+                    join rSide in xDocRight.XPathSelectElements("RightSeq/*")
+                    on selector(lSide, kpath_1) equals selector(rSide, kpath_2)
+                    select new XElement("Join", lSide, rSide)));
+                result_InnerJoin.Save("_InnerJoin.xml");
+                // GroupJoin
+                var groupJoin =
+                        xDocLeft.XPathSelectElements("LeftSeq/*").GroupJoin(xDocRight.XPathSelectElements("RightSeq/*"),
+                        lSide => selector(lSide, kpath_1),
+                        rSide => selector(rSide, kpath_2),
+                        (lSide, rSide) => new XElement("Join", lSide, new XElement("Group", new XAttribute("Count", rSide.Count()), rSide)));
+                XDocument result_GroupJoin = new XDocument(new XElement("GroupJoin", groupJoin));
+                result_GroupJoin.Save("_GroupJoin.xml");
+                //LeftOutJoin
+                var leftOJoin = xDocLeft.XPathSelectElements("LeftSeq/*").GroupJoin(xDocRight.XPathSelectElements("RightSeq/*"),
+                        lSide => selector(lSide, kpath_1),
+                        rSide => selector(rSide, kpath_2),
+                        (lSide, tmp1) => new { lSide, tmp1 })
+                        .SelectMany(v => v.tmp1.DefaultIfEmpty()
+                        .Select(rSide => new XElement("Join", v.lSide, rSide)));
+                XDocument result_LeftOuterJoin = new XDocument(new XElement("LeftOuterJoin", leftOJoin));
+                result_LeftOuterJoin.Save("_LeftOuterJoin.xml");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
         }
     }
 }

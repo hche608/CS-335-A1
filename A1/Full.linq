@@ -118,8 +118,18 @@ void Main()
                     rSide => selector(rSide, kpath_2),
                     (lSide, rSide) => new XElement("Join", lSide, new XElement("Group", new XAttribute("Count", rSide.Count()), rSide)));
 			XDocument result_GroupJoin = new XDocument(new XElement("GroupJoin", groupJoin));	
-			result_GroupJoin.Dump("G");
+			//result_GroupJoin.Dump("G");
 			//result_GroupJoin.Save("_GroupJoin.xml");
+			result_InnerJoin.XPathSelectElements("InnerJoin/*").Dump("Inner");
+			//LeftOutJoin
+            var letOJoin = xDocLeft.XPathSelectElements("LeftSeq/*").GroupJoin(xDocRight.XPathSelectElements("RightSeq/*"),
+                    lSide => selector(lSide, kpath_1),
+                    rSide => selector(rSide, kpath_2),
+                    (lSide, ms) => new { lSide, ms })
+                    .SelectMany(z => z.ms.DefaultIfEmpty()
+                    .Select(rSide => new XElement("Join", z.lSide, rSide)));
+					
+			letOJoin.Dump("LOJ");
 }
 
 // Define other methods and classes here
